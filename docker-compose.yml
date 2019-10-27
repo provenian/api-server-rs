@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: provenian
+      TZ: "Asia/Tokyo"
+    ports:
+      - 5506:3306
