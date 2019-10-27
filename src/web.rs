@@ -47,7 +47,7 @@ impl WebContext {
             .map_err(|e| e.to_http_error())?;
 
         if let Some(check_role) = validate_user_role {
-            if user.role < check_role {
+            if user.role[0] < check_role {
                 return Err(
                     ServiceError::Unauthorized(failure::err_msg("Role is not enough"))
                         .to_http_error(),

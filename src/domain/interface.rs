@@ -1,3 +1,5 @@
+use crate::error::ServiceError;
+
 pub trait IJWTHandler<Payload> {
-    fn verify(&self, jwt: &str) -> Result<Payload, biscuit::errors::Error>;
+    fn verify(&self, jwt: &str) -> Result<Payload, ServiceError>;
 }

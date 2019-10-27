@@ -9,6 +9,7 @@ pub struct Config {
     pub jwk_url: String,
 }
 
+#[derive(Clone)]
 pub struct Infras {
     pub jwt_handler: Arc<dyn interface::IJWTHandler<model::AuthUser> + Sync + Send>,
 }
@@ -21,15 +22,16 @@ impl Infras {
     }
 }
 
+#[derive(Clone)]
 pub struct Services {
     pub auth_service: Arc<service::AuthService>,
     pub echo_service: Arc<service::EchoService>,
 }
 
 impl Services {
-    pub fn new() -> Services {
+    pub fn new(infras: Infras) -> Services {
         Services {
-            auth_service: Arc::new(service::AuthService::new()),
+            auth_service: Arc::new(service::AuthService::new(infras.jwt_handler)),
             echo_service: Arc::new(service::EchoService::new()),
         }
     }
@@ -42,9 +44,12 @@ pub struct AppContext {
 
 impl AppContext {
     pub fn new(config: Config) -> AppContext {
+        let infras = Infras::new(config);
+        let services = Services::new(infras.clone());
+
         AppContext {
-            services: Services::new(),
-            infras: Infras::new(config),
+            infras: infras,
+            services: services,
         }
     }
 }
