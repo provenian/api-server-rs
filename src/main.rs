@@ -18,24 +18,12 @@ use dotenv::dotenv;
 use std::env;
 
 async fn migrate(database_url: &str) -> Result<(), mysql_async::error::Error> {
-    let raw_conn = mysql_async::Conn::new(
-        mysql_async::OptsBuilder::new()
-            .ip_or_hostname("127.0.0.1")
-            .tcp_port(5506)
-            .user(Some("root"))
-            .pass(Some("password"))
-            .db_name(Some("provenian"))
-            .prefer_socket(Some(false))
-            .pool_constraints(mysql_async::PoolConstraints::new(1, 1))
-            .clone(),
-    )
-    .await?;
+    let raw_conn = mysql_async::Conn::from_url(database_url).await?;
     let mut conn = debil_mysql::DebilConn::from_conn(raw_conn);
 
-    conn.create_table::<serviceclient::ProblemRecord>().await?;
-    conn.create_table::<serviceclient::ProblemTagRelation>()
-        .await?;
-    conn.create_table::<serviceclient::ProblemLanguageRelation>()
+    conn.migrate::<serviceclient::ProblemRecord>().await?;
+    conn.migrate::<serviceclient::ProblemTagRelation>().await?;
+    conn.migrate::<serviceclient::ProblemLanguageRelation>()
         .await?;
 
     Ok(())

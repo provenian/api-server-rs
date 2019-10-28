@@ -3,13 +3,13 @@ use debil::*;
 #[derive(Table)]
 #[sql(table_name = "problem_record", sql_type = "debil_mysql::MySQLValue")]
 pub struct ProblemRecord {
-    #[sql(primary_key = true, size = 50)]
+    #[sql(size = 50)]
     id: String,
     #[sql(size = 256)]
     title: String,
     created_at: i64,
     updated_at: i64,
-    #[sql(size = 50)]
+    #[sql(size = 50, not_null = true)]
     writer: String,
 }
 
@@ -19,7 +19,9 @@ pub struct ProblemRecord {
     sql_type = "debil_mysql::MySQLValue"
 )]
 pub struct ProblemTagRelation {
+    #[sql(size = 50, not_null = true)]
     problem_id: String,
+    #[sql(size = 50, not_null = true)]
     tag: String,
 }
 
@@ -29,6 +31,8 @@ pub struct ProblemTagRelation {
     sql_type = "debil_mysql::MySQLValue"
 )]
 pub struct ProblemLanguageRelation {
+    #[sql(size = 50, not_null = true)]
     problem_id: String,
+    #[sql(size = 50, not_null = true)]
     language: String,
 }

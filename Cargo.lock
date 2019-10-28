@@ -631,7 +631,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "debil"
 version = "0.1.0"
-source = "git+https://github.com/myuon/debil.git#748dd0e31517cab72a2d8946399a30979fbf2045"
+source = "git+https://github.com/myuon/debil.git#0fafe362aeb1a857ad354e411f832b5c01781f9c"
 dependencies = [
  "debil-derive 0.1.0 (git+https://github.com/myuon/debil.git)",
 ]
@@ -639,7 +639,7 @@ dependencies = [
 [[package]]
 name = "debil-derive"
 version = "0.1.0"
-source = "git+https://github.com/myuon/debil.git#748dd0e31517cab72a2d8946399a30979fbf2045"
+source = "git+https://github.com/myuon/debil.git#0fafe362aeb1a857ad354e411f832b5c01781f9c"
 dependencies = [
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -649,7 +649,7 @@ dependencies = [
 [[package]]
 name = "debil-mysql"
 version = "0.1.0"
-source = "git+https://github.com/myuon/debil-mysql.git#a3dbdd0233dd89c0ad73388862b7184af060648e"
+source = "git+https://github.com/myuon/debil-mysql.git#501a7ac12881879d63bd3b1cc63d0b8ef114939d"
 dependencies = [
  "debil 0.1.0 (git+https://github.com/myuon/debil.git)",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
