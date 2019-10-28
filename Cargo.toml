@@ -21,7 +21,9 @@ failure = "0.1.6"
 env_logger = "0.7.0"
 log = "0.4.8"
 biscuit = "0.3.1"
+debil = { git = "https://github.com/myuon/debil.git" }
 debil-mysql = { git = "https://github.com/myuon/debil-mysql.git" }
 mysql_async = "0.21.0-alpha.2"
 reqwest = "0.9.22"
 base64 = "*"
+tokio = "0.2.0-alpha.6"
