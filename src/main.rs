@@ -13,7 +13,6 @@ mod web;
 mod async_await;
 mod error;
 
-use actix::prelude::*;
 use dotenv::dotenv;
 use std::env;
 
@@ -25,8 +24,6 @@ fn main() -> std::io::Result<()> {
     dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is empty");
     let jwk_url = env::var("JWK_URL").expect("JWK_URL is empty");
-
-    System::new("rustapp");
 
     actix_web::HttpServer::new(move || {
         actix_web::App::new()
