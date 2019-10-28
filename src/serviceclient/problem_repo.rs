@@ -3,7 +3,7 @@ use debil::*;
 #[derive(Table)]
 #[sql(table_name = "problem_record", sql_type = "debil_mysql::MySQLValue")]
 pub struct ProblemRecord {
-    #[sql(size = 50)]
+    #[sql(size = 50, primary_key = true)]
     id: String,
     #[sql(size = 256)]
     title: String,
