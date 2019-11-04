@@ -170,8 +170,9 @@ impl IProblemRepository for ProblemRepository {
                 .map_err(ServiceError::DBError)?,
         );
 
+        let cond = format!("id = {}", key);
         let record = conn
-            .first::<ProblemRecord>()
+            .first::<ProblemRecord>(vec![cond.as_str()])
             .await
             .map_err(ServiceError::DBError)?;
 
