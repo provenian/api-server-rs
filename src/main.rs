@@ -1,5 +1,3 @@
-#![feature(async_closure)]
-
 #[macro_use]
 extern crate failure;
 #[macro_use]
@@ -17,7 +15,7 @@ mod error;
 use dotenv::dotenv;
 use std::env;
 
-async fn migrate(database_url: &str) -> Result<(), mysql_async::error::Error> {
+async fn migrate(database_url: &str) -> Result<(), debil_mysql::Error> {
     let raw_conn = mysql_async::Conn::from_url(database_url).await?;
     let mut conn = debil_mysql::DebilConn::from_conn(raw_conn);
 

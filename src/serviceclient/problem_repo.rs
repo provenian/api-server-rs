@@ -138,7 +138,7 @@ impl IProblemRepository for ProblemRepository {
             self.conn_pool
                 .get_conn()
                 .await
-                .map_err(ServiceError::DBError)?,
+                .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
         );
 
         conn.save::<ProblemRecord>(record)
@@ -162,20 +162,20 @@ impl IProblemRepository for ProblemRepository {
         Ok(vec![])
     }
 
-    async fn find_by_id(&self, key: String) -> Result<Option<model::Problem>, ServiceError> {
+    async fn find_by_id(&self, key: String) -> Result<model::Problem, ServiceError> {
         let mut conn = debil_mysql::DebilConn::from_conn(
             self.conn_pool
                 .get_conn()
                 .await
-                .map_err(ServiceError::DBError)?,
+                .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
         );
 
-        let cond = format!("id = {}", key);
+        let cond = vec![format!("id = {}", key)];
         let record = conn
-            .first::<ProblemRecord>(vec![cond.as_str()])
+            .first_with::<ProblemRecord>(debil::QueryBuilder::new().wheres(cond))
             .await
             .map_err(ServiceError::DBError)?;
 
-        Ok(record.map(|r| r.to_model(vec![], vec![])))
+        Ok(record.to_model(vec![], vec![]))
     }
 }

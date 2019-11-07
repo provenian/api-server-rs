@@ -1,7 +1,7 @@
 #[derive(Fail, Debug)]
 pub enum ServiceError {
     #[fail(display = "DB Error: {}", _0)]
-    DBError(#[fail(cause)] mysql_async::error::Error),
+    DBError(#[fail(cause)] debil_mysql::Error),
 
     #[fail(display = "Parse Error: {}", _0)]
     ParseError(#[fail(cause)] serde_json::Error),
