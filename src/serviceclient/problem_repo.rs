@@ -61,7 +61,7 @@ impl ProblemRecord {
 
     fn to_model(
         self,
-        tags: Vec<ProblemTagRelation>,
+        tags: Vec<String>,
         attachments: Vec<ProblemLanguageRelation>,
     ) -> model::Problem {
         model::Problem {
@@ -71,7 +71,7 @@ impl ProblemRecord {
                 created_at: self.created_at,
                 updated_at: self.updated_at,
                 writer: self.writer,
-                tags: tags.into_iter().map(|t| t.tag).collect::<Vec<_>>(),
+                tags: tags,
                 languages: attachments
                     .iter()
                     .map(|r| serde_json::from_str(&r.language).unwrap_or(model::Language::Unknown))
@@ -86,6 +86,22 @@ impl ProblemRecord {
                     content: r.content,
                 })
                 .collect::<Vec<_>>(),
+        }
+    }
+
+    fn to_model_summary(
+        self,
+        tags: Vec<String>,
+        languages: Vec<model::Language>,
+    ) -> model::ProblemSummary {
+        model::ProblemSummary {
+            id: self.id,
+            title: self.title,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+            writer: self.writer,
+            tags: tags,
+            languages: languages,
         }
     }
 }
@@ -178,18 +194,22 @@ impl IProblemRepository for ProblemRepository {
                 .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
         );
 
-        conn.load_with2::<ProblemRecord, JoinedProblemView>(
-            debil::QueryBuilder::new()
-                .left_join(
-                    SQLTable::table_name(std::marker::PhantomData::<ProblemTagRelation>),
-                    ("id", "problem_id"),
-                )
-                .group_by(vec!["problem_record.id"])
-                .append_selects(vec!["GROUP_CONCAT(tag) as tag"]),
-        )
-        .await?;
+        let problems = conn
+            .load_with2::<ProblemRecord, JoinedProblemView>(
+                debil::QueryBuilder::new()
+                    .left_join(
+                        SQLTable::table_name(std::marker::PhantomData::<ProblemTagRelation>),
+                        ("id", "problem_id"),
+                    )
+                    .group_by(vec!["problem_record.id"])
+                    .append_selects(vec!["GROUP_CONCAT(tag) as tag"]),
+            )
+            .await?;
 
-        Ok(vec![])
+        Ok(problems
+            .into_iter()
+            .map(|v| v.problem.to_model_summary(vec![v.tag], vec![]))
+            .collect::<Vec<_>>())
     }
 
     async fn list_by_tag(&self, tag: String) -> Result<Vec<model::ProblemSummary>, ServiceError> {

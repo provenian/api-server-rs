@@ -39,10 +39,41 @@ pub struct ProblemSummary {
     pub languages: Vec<Language>,
 }
 
+impl ProblemSummary {
+    pub fn new(
+        title: String,
+        writer: String,
+        tags: Vec<String>,
+        languages: Vec<Language>,
+    ) -> ProblemSummary {
+        let now = time::now().to_timespec().sec;
+
+        ProblemSummary {
+            id: ulid::Ulid::new().to_string(),
+            title,
+            created_at: now,
+            updated_at: now,
+            writer,
+            tags,
+            languages,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Problem {
     #[serde(flatten)]
     pub summary: ProblemSummary,
     pub content: String,
     pub attachments: Vec<ProblemAttachment>,
+}
+
+impl Problem {
+    pub fn new(title: String, content: String, writer: String) -> Problem {
+        Problem {
+            summary: ProblemSummary::new(title, writer, vec![], vec![]),
+            content,
+            attachments: vec![],
+        }
+    }
 }
