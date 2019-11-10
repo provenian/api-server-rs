@@ -19,6 +19,12 @@ pub enum ServiceError {
     InternalServerError(Box<ServiceError>),
 }
 
+impl From<debil_mysql::Error> for ServiceError {
+    fn from(err: debil_mysql::Error) -> ServiceError {
+        ServiceError::DBError(err)
+    }
+}
+
 impl ServiceError {
     pub fn to_http_error(self) -> actix_web::Error {
         use ServiceError::*;

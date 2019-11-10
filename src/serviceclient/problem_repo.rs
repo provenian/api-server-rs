@@ -4,7 +4,7 @@ use crate::error::ServiceError;
 use async_trait::async_trait;
 use debil::*;
 
-#[derive(Table)]
+#[derive(Table, Clone)]
 #[sql(table_name = "problem_record", sql_type = "debil_mysql::MySQLValue")]
 pub struct ProblemRecord {
     #[sql(size = 50, primary_key = true)]
@@ -129,6 +129,22 @@ impl ProblemRepository {
     }
 }
 
+pub struct JoinedProblemView {
+    problem: ProblemRecord,
+    tag: String,
+}
+
+impl debil::SQLMapper for JoinedProblemView {
+    type ValueType = debil_mysql::MySQLValue;
+
+    fn map_from_sql(values: std::collections::HashMap<String, Self::ValueType>) -> Self {
+        let tag = String::deserialize(values["tag"].clone());
+        let problem = debil::map_from_sql::<ProblemRecord>(values);
+
+        JoinedProblemView { problem, tag }
+    }
+}
+
 #[async_trait]
 impl IProblemRepository for ProblemRepository {
     async fn save(&self, problem: model::Problem) -> Result<(), ServiceError> {
@@ -155,6 +171,24 @@ impl IProblemRepository for ProblemRepository {
     }
 
     async fn list(&self) -> Result<Vec<model::ProblemSummary>, ServiceError> {
+        let mut conn = debil_mysql::DebilConn::from_conn(
+            self.conn_pool
+                .get_conn()
+                .await
+                .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
+        );
+
+        conn.load_with2::<ProblemRecord, JoinedProblemView>(
+            debil::QueryBuilder::new()
+                .left_join(
+                    SQLTable::table_name(std::marker::PhantomData::<ProblemTagRelation>),
+                    ("id", "problem_id"),
+                )
+                .group_by(vec!["problem_record.id"])
+                .append_selects(vec!["GROUP_CONCAT(tag) as tag"]),
+        )
+        .await?;
+
         Ok(vec![])
     }
 
@@ -173,8 +207,7 @@ impl IProblemRepository for ProblemRepository {
         let cond = vec![format!("id = {}", key)];
         let record = conn
             .first_with::<ProblemRecord>(debil::QueryBuilder::new().wheres(cond))
-            .await
-            .map_err(ServiceError::DBError)?;
+            .await?;
 
         Ok(record.to_model(vec![], vec![]))
     }
