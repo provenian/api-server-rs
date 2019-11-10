@@ -1,6 +1,7 @@
 use crate::domain::interface::IProblemRepository;
 use crate::domain::model;
 use crate::error::ServiceError;
+use crate::infra::conn_pool::DBConnector;
 use async_trait::async_trait;
 use debil::*;
 
@@ -134,14 +135,12 @@ pub struct ProblemLanguageRelation {
 }
 
 pub struct ProblemRepository {
-    conn_pool: mysql_async::Pool,
+    db: DBConnector,
 }
 
 impl ProblemRepository {
-    pub fn new(conn_pool: mysql_async::Pool) -> ProblemRepository {
-        ProblemRepository {
-            conn_pool: conn_pool,
-        }
+    pub fn new(db: DBConnector) -> ProblemRepository {
+        ProblemRepository { db }
     }
 }
 
@@ -166,13 +165,7 @@ impl IProblemRepository for ProblemRepository {
     async fn save(&self, problem: model::Problem) -> Result<(), ServiceError> {
         let (record, tags, languages) = ProblemRecord::from_model(problem);
 
-        let mut conn = debil_mysql::DebilConn::from_conn(
-            self.conn_pool
-                .get_conn()
-                .await
-                .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
-        );
-
+        let mut conn = self.db.get_conn().await?;
         conn.save::<ProblemRecord>(record)
             .await
             .map_err(ServiceError::DBError)?;
@@ -187,12 +180,7 @@ impl IProblemRepository for ProblemRepository {
     }
 
     async fn list(&self) -> Result<Vec<model::ProblemSummary>, ServiceError> {
-        let mut conn = debil_mysql::DebilConn::from_conn(
-            self.conn_pool
-                .get_conn()
-                .await
-                .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
-        );
+        let mut conn = self.db.get_conn().await?;
 
         let problems = conn
             .load_with2::<ProblemRecord, JoinedProblemView>(
@@ -217,12 +205,7 @@ impl IProblemRepository for ProblemRepository {
     }
 
     async fn find_by_id(&self, key: String) -> Result<model::Problem, ServiceError> {
-        let mut conn = debil_mysql::DebilConn::from_conn(
-            self.conn_pool
-                .get_conn()
-                .await
-                .map_err(|err| ServiceError::DBError(debil_mysql::Error::MySQLError(err)))?,
-        );
+        let mut conn = self.db.get_conn().await?;
 
         let cond = vec![format!("id = {}", key)];
         let record = conn

@@ -39,6 +39,8 @@ async fn main() -> std::io::Result<()> {
 
     migrate(&database_url).await.unwrap();
 
+    let sys = actix_rt::System::new("app");
+
     actix_web::HttpServer::new(move || {
         actix_web::App::new()
             .wrap(actix_web::middleware::Logger::default())
@@ -50,5 +52,7 @@ async fn main() -> std::io::Result<()> {
     })
     .bind("127.0.0.1:8080")?
     .workers(1) // for local development
-    .run()
+    .start();
+
+    sys.run()
 }

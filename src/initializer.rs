@@ -12,14 +12,14 @@ pub struct Config {
 
 #[derive(Clone)]
 pub struct Infras {
-    pub db_pool: mysql_async::Pool,
+    pub db_pool: infra::conn_pool::DBConnector,
     pub jwt_handler: Arc<dyn interface::IJWTHandler<model::AuthUser> + Sync + Send>,
 }
 
 impl Infras {
     pub fn new(config: Config) -> Infras {
         Infras {
-            db_pool: mysql_async::Pool::from_url(config.database_url).unwrap(),
+            db_pool: infra::conn_pool::DBConnector::new(config.database_url),
             jwt_handler: Arc::new(infra::jwt_handler::JWTHandler::new(&config.jwk_url)),
         }
     }
