@@ -40,6 +40,13 @@ async fn main() -> std::io::Result<()> {
 
     let sys = actix_rt::System::new("app");
 
+    server::HttpServer::new()
+        .bind(([127, 0, 0, 1], 8080).into())
+        .service(server::App::new())
+        .run()
+        .await
+        .unwrap();
+
     actix_web::HttpServer::new(move || {
         actix_web::App::new()
             .wrap(actix_web::middleware::Logger::default())
