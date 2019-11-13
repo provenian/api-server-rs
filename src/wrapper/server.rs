@@ -74,7 +74,7 @@ impl HttpServer {
 
                     async move {
                         match paths.find(p.as_str()) {
-                            None => Response::builder().body(Body::from("not found")),
+                            None => Response::builder().status(405).body(Body::from("")),
                             Some((f, ps)) => f(req, ps).await,
                         }
                     }
