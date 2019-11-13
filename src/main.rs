@@ -42,7 +42,7 @@ async fn main() -> std::io::Result<()> {
 
     server::HttpServer::new()
         .bind(([127, 0, 0, 1], 8080).into())
-        .service(server::App::new())
+        .service(server::App::new(()))
         .run()
         .await
         .unwrap();
