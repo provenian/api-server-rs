@@ -1,11 +1,38 @@
+use futures::prelude::*;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Error, Response, Server};
+use hyper::{Body, Method, Request, Response, Server};
+use path_tree::PathTree;
 
-pub struct App {}
+type FutureResult<O, E> = std::pin::Pin<Box<dyn Future<Output = Result<O, E>> + Send>>;
+type Params<'a> = Vec<(&'a str, &'a str)>;
+type Handler<I, O> = fn(Request<I>, Params) -> FutureResult<Response<O>, http::Error>;
+
+#[derive(Clone)]
+pub struct App {
+    paths: PathTree<Handler<Body, Body>>,
+}
+
+fn internal_path(method: &Method, path: &str) -> String {
+    format!("/{}/{}", method, path)
+}
 
 impl App {
     pub fn new() -> App {
-        App {}
+        App {
+            paths: PathTree::new(),
+        }
+    }
+
+    pub fn service(
+        &mut self,
+        path: &str,
+        method: Method,
+        service: Handler<Body, Body>,
+    ) -> &mut Self {
+        self.paths
+            .insert(internal_path(&method, path).as_str(), service);
+
+        self
     }
 }
 
@@ -34,12 +61,23 @@ impl HttpServer {
         self
     }
 
-    pub async fn run(&mut self) -> Result<(), Error> {
+    pub async fn run(&mut self) -> Result<(), hyper::Error> {
         let addr = self.addr.take().unwrap();
+        let app = self.app.take().unwrap();
         let server = Server::bind(&addr).serve(make_service_fn(|_| {
+            let app = app.clone();
+
             async {
-                Ok::<_, Error>(service_fn(|req| {
-                    async { Ok::<_, Error>(Response::new(Body::from("hello"))) }
+                Ok::<_, hyper::Error>(service_fn(move |req| {
+                    let paths = app.paths.clone();
+                    let p = internal_path(req.method(), req.uri().to_string().as_str());
+
+                    async move {
+                        match paths.find(p.as_str()) {
+                            None => Response::builder().body(Body::from("not found")),
+                            Some((f, ps)) => f(req, ps).await,
+                        }
+                    }
                 }))
             }
         }));
