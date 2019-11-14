@@ -153,7 +153,6 @@ impl debil::SQLMapper for JoinedProblemView {
     type ValueType = debil_mysql::MySQLValue;
 
     fn map_from_sql(values: std::collections::HashMap<String, Self::ValueType>) -> Self {
-        error!("{:?}", values.keys());
         let tag = debil_mysql::MySQLValue::deserialize(values["tag"].clone());
         let problem = debil::map_from_sql::<ProblemRecord>(values);
 
