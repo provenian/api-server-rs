@@ -1,7 +1,7 @@
 use crate::domain::interface::IProblemRepository;
 use crate::domain::model;
 use crate::error::ServiceError;
-use crate::infra::conn_pool::DBConnector;
+use crate::infra::conn_pool::ConnPool;
 use async_trait::async_trait;
 use debil::*;
 
@@ -135,25 +135,26 @@ pub struct ProblemLanguageRelation {
 }
 
 pub struct ProblemRepository {
-    db: DBConnector,
+    db: ConnPool,
 }
 
 impl ProblemRepository {
-    pub fn new(db: DBConnector) -> ProblemRepository {
+    pub fn new(db: ConnPool) -> ProblemRepository {
         ProblemRepository { db }
     }
 }
 
 pub struct JoinedProblemView {
     problem: ProblemRecord,
-    tag: String,
+    tag: Option<String>,
 }
 
 impl debil::SQLMapper for JoinedProblemView {
     type ValueType = debil_mysql::MySQLValue;
 
     fn map_from_sql(values: std::collections::HashMap<String, Self::ValueType>) -> Self {
-        let tag = String::deserialize(values["tag"].clone());
+        error!("{:?}", values.keys());
+        let tag = debil_mysql::MySQLValue::deserialize(values["tag"].clone());
         let problem = debil::map_from_sql::<ProblemRecord>(values);
 
         JoinedProblemView { problem, tag }
@@ -182,6 +183,7 @@ impl IProblemRepository for ProblemRepository {
     async fn list(&self) -> Result<Vec<model::ProblemSummary>, ServiceError> {
         let mut conn = self.db.get_conn().await?;
 
+        let selects = vec![format!("{}.tag", table_name::<ProblemTagRelation>())];
         let problems = conn
             .load_with2::<ProblemRecord, JoinedProblemView>(
                 debil::QueryBuilder::new()
@@ -189,14 +191,16 @@ impl IProblemRepository for ProblemRepository {
                         SQLTable::table_name(std::marker::PhantomData::<ProblemTagRelation>),
                         ("id", "problem_id"),
                     )
-                    .group_by(vec!["problem_record.id"])
-                    .append_selects(vec!["GROUP_CONCAT(tag) as tag"]),
+                    .append_selects(selects),
             )
             .await?;
 
         Ok(problems
             .into_iter()
-            .map(|v| v.problem.to_model_summary(vec![v.tag], vec![]))
+            .map(|v| {
+                v.problem
+                    .to_model_summary(vec![v.tag.unwrap_or("none".to_string())], vec![])
+            })
             .collect::<Vec<_>>())
     }
 

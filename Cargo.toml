@@ -7,9 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix = "0.8.3"
-actix-web = "1.0.8"
-actix-http = "0.2.10"
 dotenv = "*"
 futures01 = { version = "0.1.26" }
 futures-preview = { version = "=0.3.0-alpha.19", features = ["io-compat"] }
@@ -28,5 +25,6 @@ reqwest = "0.9.22"
 base64 = "*"
 tokio = "0.2.0-alpha.6"
 time = "*"
-actix-rt = "0.2.5"
-r2d2 = "0.8.6"
+hyper = { version  = "0.13.0-alpha.4", features = ["unstable-stream"] }
+path-tree = "0.1.9"
+http = "0.1.19"

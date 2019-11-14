@@ -7,10 +7,9 @@ mod domain;
 mod infra;
 mod initializer;
 mod serviceclient;
-mod web;
 
-mod async_await;
-mod error;
+mod wrapper;
+pub use wrapper::*;
 
 use dotenv::dotenv;
 use std::env;
@@ -39,20 +38,15 @@ async fn main() -> std::io::Result<()> {
 
     migrate(&database_url).await.unwrap();
 
-    let sys = actix_rt::System::new("app");
+    server::HttpServer::new()
+        .bind(([127, 0, 0, 1], 8080).into())
+        .service(web::handlers(initializer::Config {
+            database_url: database_url.clone(),
+            jwk_url: jwk_url.clone(),
+        }))
+        .run()
+        .await
+        .unwrap();
 
-    actix_web::HttpServer::new(move || {
-        actix_web::App::new()
-            .wrap(actix_web::middleware::Logger::default())
-            .data(web::WebContext::new(initializer::Config {
-                database_url: database_url.clone(),
-                jwk_url: jwk_url.clone(),
-            }))
-            .configure(web::handlers)
-    })
-    .bind("127.0.0.1:8080")?
-    .workers(1) // for local development
-    .start();
-
-    sys.run()
+    Ok(())
 }
