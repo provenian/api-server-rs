@@ -38,28 +38,15 @@ async fn main() -> std::io::Result<()> {
 
     migrate(&database_url).await.unwrap();
 
-    let sys = actix_rt::System::new("app");
-
     server::HttpServer::new()
         .bind(([127, 0, 0, 1], 8080).into())
-        .service(
-            server::App::new(web::WebContext::new(initializer::Config {
-                database_url: database_url.clone(),
-                jwk_url: jwk_url.clone(),
-            }))
-            .route("/problems", hyper::Method::GET, api_problem_list),
-        )
+        .service(web::handlers(initializer::Config {
+            database_url: database_url.clone(),
+            jwk_url: jwk_url.clone(),
+        }))
         .run()
         .await
         .unwrap();
 
     Ok(())
-}
-
-async fn api_problem_list(
-    req: hyper::Request<hyper::Body>,
-    params: server::Params,
-    data: std::sync::Arc<web::WebContext>,
-) -> Result<hyper::Response<hyper::Body>, http::Error> {
-    hyper::Response::builder().body(hyper::Body::from("fooo"))
 }

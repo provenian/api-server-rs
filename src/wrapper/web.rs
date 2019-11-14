@@ -3,9 +3,7 @@ use crate::domain::model;
 use crate::domain::service;
 use crate::error::ServiceError;
 use crate::initializer;
-use actix_http::Response;
-use actix_web::{error, web, HttpResponse};
-use futures01::stream::Stream;
+use crate::server;
 
 pub struct WebContext {
     pub app: initializer::AppContext,
@@ -18,6 +16,7 @@ impl WebContext {
         }
     }
 
+    /*
     fn auth_token(req: web::HttpRequest) -> Option<String> {
         req.headers()
             .get("Authorization")
@@ -58,86 +57,33 @@ impl WebContext {
 
         Ok(user)
     }
+    */
 }
 
-pub fn handlers(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::resource("/echo").route(web::post().to_async(async_await::wrap3(api_echo))))
-        .service(
-            web::resource("/problems")
-                .route(web::get().to_async(async_await::wrap3(api_problem_list)))
-                .route(web::post().to_async(async_await::wrap3(api_problem_create))),
-        );
-}
-
-async fn api_echo(
-    payload: web::Payload,
-    context: web::Data<WebContext>,
-    req: web::HttpRequest,
-) -> Result<HttpResponse, error::Error> {
-    let body = Box::new(
-        futures::compat::Compat01As03::new(payload.concat2())
-            .await
-            .map_err(error::ErrorBadRequest)?,
-    );
-    let input = serde_json::from_slice::<String>(body.as_ref()).map_err(error::ErrorBadRequest)?;
-
-    context
-        .get_ref()
-        .authorize(req, Some(model::Role::Writer))
-        .await?;
-
-    let res = context
-        .app
-        .services
-        .echo_service
-        .echo(input)
-        .await
-        .map_err(|e| e.to_http_error())?;
-
-    Ok(Response::Ok().json(res))
-}
-
-async fn api_problem_create(
-    payload: web::Payload,
-    context: web::Data<WebContext>,
-    req: web::HttpRequest,
-) -> Result<HttpResponse, error::Error> {
-    let body = Box::new(
-        futures::compat::Compat01As03::new(payload.concat2())
-            .await
-            .map_err(error::ErrorBadRequest)?,
-    );
-    let input = serde_json::from_slice::<service::ProblemCreateInput>(body.as_ref())
-        .map_err(error::ErrorBadRequest)?;
-
-    context
-        .get_ref()
-        .authorize(req, Some(model::Role::Writer))
-        .await?;
-
-    let res = context
-        .app
-        .services
-        .problem_service
-        .create(input)
-        .await
-        .map_err(|e| e.to_http_error())?;
-
-    Ok(Response::Ok().json(res))
+pub fn handlers(config: initializer::Config) -> server::App<WebContext> {
+    server::App::new(WebContext::new(config)).route(
+        "/problems",
+        hyper::Method::GET,
+        api_problem_list,
+    )
 }
 
 async fn api_problem_list(
-    payload: web::Payload,
-    context: web::Data<WebContext>,
-    req: web::HttpRequest,
-) -> Result<HttpResponse, error::Error> {
-    let res = context
+    _req: hyper::Request<hyper::Body>,
+    _params: server::Params,
+    data: std::sync::Arc<WebContext>,
+) -> Result<hyper::Response<hyper::Body>, http::Error> {
+    let problems = data
+        .as_ref()
         .app
         .services
         .problem_service
         .list()
         .await
-        .map_err(|e| e.to_http_error())?;
+        .unwrap();
 
-    Ok(Response::Ok().json(res))
+    let resp = hyper::Response::builder()
+        .status(hyper::StatusCode::OK)
+        .body(hyper::Body::from(serde_json::to_string(&problems).unwrap()))?;
+    Ok(resp)
 }

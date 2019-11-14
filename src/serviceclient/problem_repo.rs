@@ -1,7 +1,7 @@
 use crate::domain::interface::IProblemRepository;
 use crate::domain::model;
 use crate::error::ServiceError;
-use crate::infra::conn_pool::DBConnector;
+use crate::infra::conn_pool::ConnPool;
 use async_trait::async_trait;
 use debil::*;
 
@@ -135,11 +135,11 @@ pub struct ProblemLanguageRelation {
 }
 
 pub struct ProblemRepository {
-    db: DBConnector,
+    db: ConnPool,
 }
 
 impl ProblemRepository {
-    pub fn new(db: DBConnector) -> ProblemRepository {
+    pub fn new(db: ConnPool) -> ProblemRepository {
         ProblemRepository { db }
     }
 }
