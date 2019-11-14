@@ -2,23 +2,33 @@ use futures::prelude::*;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
 use path_tree::PathTree;
+use std::pin::Pin;
 use std::sync::Arc;
 
-type FutureResult<O, E> = std::pin::Pin<Box<dyn Future<Output = Result<O, E>> + Send>>;
-type Params<'a> = Vec<(&'a str, &'a str)>;
-type Handler<D, I, O> = fn(Request<I>, Params, &D) -> FutureResult<Response<O>, http::Error>;
+type FutureResult<O, E> = Pin<Box<dyn Future<Output = Result<O, E>> + Send>>;
+pub type Params = Vec<(String, String)>;
+type Handler<D, I, O> =
+    Arc<dyn Fn(Request<I>, Params, Arc<D>) -> FutureResult<Response<O>, http::Error> + Sync + Send>;
 
-#[derive(Clone)]
 pub struct App<D> {
     paths: PathTree<Handler<D, Body, Body>>,
     data: Arc<D>,
+}
+
+impl<D> Clone for App<D> {
+    fn clone(&self) -> Self {
+        App {
+            paths: self.paths.clone(),
+            data: self.data.clone(),
+        }
+    }
 }
 
 fn internal_path(method: &Method, path: &str) -> String {
     format!("/{}/{}", method, path)
 }
 
-impl<D> App<D> {
+impl<D: Sync + Send + 'static> App<D> {
     pub fn new(data: D) -> App<D> {
         App {
             paths: PathTree::new(),
@@ -26,9 +36,15 @@ impl<D> App<D> {
         }
     }
 
-    pub fn route(mut self, path: &str, method: Method, service: Handler<D, Body, Body>) -> Self {
-        self.paths
-            .insert(internal_path(&method, path).as_str(), service);
+    pub fn route<F, T>(mut self, path: &str, method: Method, f: F) -> Self
+    where
+        F: Fn(Request<Body>, Params, Arc<D>) -> T + Clone + Sync + Send + 'static,
+        T: Future<Output = Result<Response<Body>, http::Error>> + Send + 'static,
+    {
+        self.paths.insert(
+            internal_path(&method, path).as_str(),
+            Arc::new(move |r, p, d| Box::pin(f(r, p, d))),
+        );
 
         self
     }
@@ -39,7 +55,7 @@ pub struct HttpServer<D> {
     app: Option<App<D>>,
 }
 
-impl<D: Clone + Sync + Send + 'static> HttpServer<D> {
+impl<D: Sync + Send + 'static> HttpServer<D> {
     pub fn new() -> HttpServer<D> {
         HttpServer {
             addr: None,
@@ -74,7 +90,16 @@ impl<D: Clone + Sync + Send + 'static> HttpServer<D> {
                     async move {
                         match paths.find(p.as_str()) {
                             None => Response::builder().status(405).body(Body::from("")),
-                            Some((f, ps)) => f(req, ps, data.as_ref()).await,
+                            Some((f, ps)) => {
+                                f(
+                                    req,
+                                    ps.iter()
+                                        .map(|(x, y)| (x.to_string(), y.to_string()))
+                                        .collect::<Vec<_>>(),
+                                    data.clone(),
+                                )
+                                .await
+                            }
                         }
                     }
                 }))

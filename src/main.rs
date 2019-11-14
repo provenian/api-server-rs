@@ -42,23 +42,24 @@ async fn main() -> std::io::Result<()> {
 
     server::HttpServer::new()
         .bind(([127, 0, 0, 1], 8080).into())
-        .service(server::App::new(()))
+        .service(
+            server::App::new(web::WebContext::new(initializer::Config {
+                database_url: database_url.clone(),
+                jwk_url: jwk_url.clone(),
+            }))
+            .route("/problems", hyper::Method::GET, api_problem_list),
+        )
         .run()
         .await
         .unwrap();
 
-    actix_web::HttpServer::new(move || {
-        actix_web::App::new()
-            .wrap(actix_web::middleware::Logger::default())
-            .data(web::WebContext::new(initializer::Config {
-                database_url: database_url.clone(),
-                jwk_url: jwk_url.clone(),
-            }))
-            .configure(web::handlers)
-    })
-    .bind("127.0.0.1:8080")?
-    .workers(1) // for local development
-    .start();
+    Ok(())
+}
 
-    sys.run()
+async fn api_problem_list(
+    req: hyper::Request<hyper::Body>,
+    params: server::Params,
+    data: std::sync::Arc<web::WebContext>,
+) -> Result<hyper::Response<hyper::Body>, http::Error> {
+    hyper::Response::builder().body(hyper::Body::from("fooo"))
 }
