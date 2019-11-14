@@ -4,6 +4,7 @@ use crate::domain::service;
 use crate::error::ServiceError;
 use crate::initializer;
 use crate::server;
+use futures::prelude::*;
 
 pub struct WebContext {
     pub app: initializer::AppContext,
@@ -61,11 +62,9 @@ impl WebContext {
 }
 
 pub fn handlers(config: initializer::Config) -> server::App<WebContext> {
-    server::App::new(WebContext::new(config)).route(
-        "/problems",
-        hyper::Method::GET,
-        api_problem_list,
-    )
+    server::App::new(WebContext::new(config))
+        .route("/problems", hyper::Method::GET, api_problem_list)
+        .route("/problems", hyper::Method::POST, api_problem_create)
 }
 
 async fn api_problem_list(
@@ -79,6 +78,29 @@ async fn api_problem_list(
         .services
         .problem_service
         .list()
+        .await
+        .unwrap();
+
+    let resp = hyper::Response::builder()
+        .status(hyper::StatusCode::OK)
+        .body(hyper::Body::from(serde_json::to_string(&problems).unwrap()))?;
+    Ok(resp)
+}
+
+async fn api_problem_create(
+    req: hyper::Request<hyper::Body>,
+    _params: server::Params,
+    data: std::sync::Arc<WebContext>,
+) -> Result<hyper::Response<hyper::Body>, http::Error> {
+    let body = String::from_utf8(req.into_body().try_concat().await.unwrap().to_vec()).unwrap();
+    let req = serde_json::from_str::<service::ProblemCreateInput>(&body).unwrap();
+
+    let problems = data
+        .as_ref()
+        .app
+        .services
+        .problem_service
+        .create(req)
         .await
         .unwrap();
 
