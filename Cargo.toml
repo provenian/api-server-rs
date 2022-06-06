@@ -23,7 +23,7 @@ debil-mysql = { git = "https://github.com/myuon/debil-mysql.git" }
 mysql_async = "0.21.0-alpha.2"
 reqwest = "0.9.22"
 base64 = "*"
-tokio = "0.2.0-alpha.6"
+tokio = "1.8.4"
 time = "*"
 hyper = { version  = "0.13.0-alpha.4", features = ["unstable-stream"] }
 path-tree = "0.1.9"
