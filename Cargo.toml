@@ -27,4 +27,4 @@ tokio = "0.2.0-alpha.6"
 time = "*"
 hyper = { version  = "0.13.0-alpha.4", features = ["unstable-stream"] }
 path-tree = "0.1.9"
-http = "0.1.19"
+http = "0.1.20"
